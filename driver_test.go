@@ -405,6 +405,70 @@ func TestEmptyStatementError(t *testing.T) {
 	assertErr(t, err, "empty statement")
 }
 
+func TestColumnsWhenReusingPreparedStatements(t *testing.T) {
+	connDB := openConnection(t)
+	defer closeConnection(t, connDB)
+
+	stmt, err := connDB.PrepareContext(ctx, "SELECT true AS res")
+	assertNoErr(t, err)
+
+	var res bool
+	rows, err := stmt.QueryContext(ctx)
+	assertNoErr(t, err)
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	assertNoErr(t, err)
+	assertEqual(t, len(columns), 1)
+
+	assertNext(t, rows)
+	assertNoErr(t, rows.Scan(&res))
+	assertEqual(t, res, true)
+	assertNoNext(t, rows)
+
+	// Reusing statement
+	rows, err = stmt.QueryContext(ctx)
+	assertNoErr(t, err)
+
+	columns, err = rows.Columns()
+	assertNoErr(t, err)
+	assertEqual(t, len(columns), 1)
+}
+
+func TestRowIterationWhenReusingPreparedStatements(t *testing.T) {
+	connDB := openConnection(t)
+	defer closeConnection(t, connDB)
+
+	stmt, err := connDB.PrepareContext(ctx, "SELECT true AS res")
+	assertNoErr(t, err)
+
+	var res bool
+	rows, err := stmt.QueryContext(ctx)
+	assertNoErr(t, err)
+	defer rows.Close()
+
+	columns, err := rows.Columns()
+	assertNoErr(t, err)
+	assertEqual(t, len(columns), 1)
+
+	assertNoErr(t, err)
+
+	assertNext(t, rows)
+	assertNoErr(t, rows.Scan(&res))
+	assertEqual(t, res, true)
+
+	assertNoNext(t, rows)
+
+	// Reusing statement
+	rows, err = stmt.QueryContext(ctx)
+	assertNoErr(t, err)
+
+	assertNext(t, rows)
+	assertNoErr(t, rows.Scan(&res))
+	assertEqual(t, res, true)
+	assertNoNext(t, rows)
+}
+
 func TestValueTypes(t *testing.T) {
 	connDB := openConnection(t, "test_value_types_pre")
 	defer closeConnection(t, connDB, "test_value_types_post")
