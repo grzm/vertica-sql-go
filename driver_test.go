@@ -405,6 +405,22 @@ func TestEmptyStatementError(t *testing.T) {
 	assertErr(t, err, "empty statement")
 }
 
+func TestColumnsWithNoRows(t *testing.T) {
+	connDB := openConnection(t)
+	defer closeConnection(t, connDB)
+
+	stmt, err := connDB.PrepareContext(ctx, "SELECT true AS res WHERE false")
+	assertNoErr(t, err)
+	rows, err := stmt.QueryContext(ctx)
+	assertNoErr(t, err)
+
+	columns, err := rows.Columns()
+	assertNoErr(t, err)
+	assertEqual(t, len(columns), 1)
+
+	assertNoNext(t, rows)
+}
+
 func TestValueTypes(t *testing.T) {
 	connDB := openConnection(t, "test_value_types_pre")
 	defer closeConnection(t, connDB, "test_value_types_post")
